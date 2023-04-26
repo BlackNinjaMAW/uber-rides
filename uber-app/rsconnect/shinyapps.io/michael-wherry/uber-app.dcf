@@ -1,0 +1,14 @@
+name: uber-app
+title: uber-app
+username:
+account: michael-wherry
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8854843
+bundleId: 7135864
+url: https://michael-wherry.shinyapps.io/uber-app/
+when: 1682467884.53016
+lastSyncTime: 1682467884.53016
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app-data/uber-data.csv|app.R|recording.log|shinycannon.jar|shinyloadtest_report.html|www/custom-tabs.css|test-logs

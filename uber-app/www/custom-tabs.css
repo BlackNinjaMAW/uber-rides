@@ -1,0 +1,13 @@
+/* Chamfer the top left corner of the active tab */
+.nav-tabs .nav-link.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-right: 10px solid white;
+  z-index: 1;
+}
+
