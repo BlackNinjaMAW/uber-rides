@@ -8,8 +8,6 @@ library(ggplot2)
 library(raster)
 library(shiny)
 
-set.seed(69)
-
 hour_levels <- c(
   "1 AM",  "2 AM", "3 AM", "4 AM",  
   "5 AM",  "6 AM",  "7 AM", "8 AM",  

@@ -50,8 +50,8 @@ dt_merged <- dt_boroughs %>%
 
 saveRDS(dt_merged, "uber-app/app-data/uber-data.rds")
 
-# Random sample of 20%, followed by join to keep Staten Island rows (About 1000 or so)
-dt_sliced <- dt_merged[sample(nrow(dt_merged), 0.2 * nrow(dt_merged))] %>%
+# Random sample of 10%, followed by join to keep Staten Island rows (About 1000 or so)
+dt_sliced <- dt_merged[sample(nrow(dt_merged), 0.1 * nrow(dt_merged))] %>%
  dt_merged[Borough == "Staten Island"][., on = .NATURAL]
 
 saveRDS(dt_sliced, "uber-app/app-data/uber-data.rds")
