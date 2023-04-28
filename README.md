@@ -18,7 +18,11 @@ This script loads, cleans, and combines the raw Uber data from multiple CSV file
 
 ### `server.R`
 
-This script is the server logic for a Shiny app that visualizes the Uber rides data. It contains functions for loading the data, creating kernel density maps, and rendering various charts and heatmaps based on user input.
+This script is the server logic for the Shiny app. It contains functions for loading the data, creating kernel density maps, and rendering various charts and heatmaps based on user input.
+
+### `ui.R`
+
+This script implements the plots and maps generated within the server function, specifying the layout of the user interface. The ui is organized as a sidebar layout, with a sidebar containing inputs to filter by, and a main pane containing a tabset.  
 
 Notable code snippets
 ---------------------
@@ -31,15 +35,17 @@ dt_may <- fread("scripts/data/raw-data/uber-raw-data-may14.csv")
 dt_jun <- fread("scripts/data/raw-data/uber-raw-data-jun14.csv")
 ...
 dt_all <- merge.data.table(dt_apr, dt_may, all = T) %>%
-  merge.data.table(dt_jun, all = T) %>%
-  ...
+	merge.data.table(dt_jun, all = T) %>%
+  	...
 ```
 
 ### Performing spatial join (from `query.R`)
 
 ```R
 nyc_boroughs <- st_read("scripts/data/geospatial-data/new-york-boroughs.geojson")
+
 sf_data <- st_as_sf(dt_all, coords = c("Lon", "Lat"), crs = 4326)
+
 sf_data_with_borough <- st_join(sf_data, nyc_boroughs)
 ```
 
@@ -64,12 +70,12 @@ output$synced_maps <- renderUI({
 })
 ```
 
-### Creating heatmaps (from `server.R`)
+### Creating a heatmap (from `server.R`)
 
 ```R
 output$monthHourHeat <- renderCachedPlot({
 	dt_month_hours <- dt_filtered() %>%
-	    .[, .(Trips = sum(.N)), by = c("Formatted.Month", "Formatted.Hour")]
+		.[, .(Trips = sum(.N)), by = c("Formatted.Month", "Formatted.Hour")]
 	
 	ggplot(dt_month_hours, aes(x = Formatted.Month, y = Formatted.Hour, fill = Trips)) +
 		geom_tile(color = "black") +
@@ -77,7 +83,8 @@ output$monthHourHeat <- renderCachedPlot({
 })
 ```
 
-### Creating charts (from `server.R`)
+### Creating a chart (from `server.R`)
+
 ```R
 output$hourChart <- renderCachedPlot({
     dt_hours <- dt_filtered() %>%
@@ -88,7 +95,8 @@ output$hourChart <- renderCachedPlot({
       ...
 ```
 
-### Tabset layout (from `ui.R`)
+### Specify tabset layout (from `ui.R`)
+
 ```R
 tabsetPanel(
         tabPanel("Heat Maps",
@@ -117,31 +125,33 @@ tabsetPanel(
       )
 ```
 
-### Input layout (from `ui.R`)
+### Specify input layout (from `ui.R`)
+
 ```R
-      selectInput("base", 
-                  label = "Select base to filter by:", 
-                  choices = c("All"),
-                  selected = "All"
-                  ),
-      selectInput("borough",
-                  label = "Select borough to filter by:", 
-                  choices = c("All"),
-                  selected = "All"
-      ),
+selectInput("base", 
+	  label = "Select base to filter by:", 
+	  choices = c("All"),
+	  selected = "All"
+	  ),
+selectInput("borough",
+	  label = "Select borough to filter by:", 
+	  choices = c("All"),
+	  selected = "All"
+),
 ```
 
 ### Populate inputs (from `server.R`)
+
 ```R
 updateSelectInput(session, "base",
                     label = "Select base to filter by:",
                     choices = c("All", as.character(unique(dt_all[["Base"]]))),
                     selected = "All"
-  )
+	)
   
-  updateSelectInput(session, "borough",
+updateSelectInput(session, "borough",
                     label = "Select borough to filter by:",
                     choices = c("All", as.character(unique(dt_all[["Borough"]]))),
                     selected = "All"
-  )
+	)	
 ```
