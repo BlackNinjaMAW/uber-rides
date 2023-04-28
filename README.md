@@ -43,11 +43,23 @@ sf_data <- st_as_sf(dt_all, coords = c("Lon", "Lat"), crs = 4326)
 sf_data_with_borough <- st_join(sf_data, nyc_boroughs)
 ```
 
-### Rendering synced maps (from `server.R`)
+### Rendering synced maps with density raster (from `server.R`)
 
 ```R
 output$synced_maps <- renderUI({
 	...
+	# Create kernel density output
+	kde <- bkde2D(dt_data[, list(Lon, Lat)],
+		  bandwidth=c(.0045, .0068), gridsize = c(1000,1000))
+
+	# Create Raster from Kernel Density output
+	KernelDensityRaster <- raster(list(x=kde$x1, y=kde$x2, z = kde$fhat))
+
+	# Set low density cells as NA so we can make them transparent with the colorNumeric function
+	KernelDensityRaster@data@values[which(KernelDensityRaster@data@values < 1)] <- NA
+
+	palRaster <- colorNumeric("Spectral", domain = KernelDensityRaster@data@values, na.color = "transparent")
+    	...
 	sync(discreteMap, binnedMap, ncol = 1)
 })
 ```
@@ -58,8 +70,78 @@ output$synced_maps <- renderUI({
 output$monthHourHeat <- renderCachedPlot({
 	dt_month_hours <- dt_filtered() %>%
 	    .[, .(Trips = sum(.N)), by = c("Formatted.Month", "Formatted.Hour")]
-	...
+	
 	ggplot(dt_month_hours, aes(x = Formatted.Month, y = Formatted.Hour, fill = Trips)) +
 		geom_tile(color = "black") +
     ...
 })
+```
+
+### Creating charts (from `server.R`)
+```R
+output$hourChart <- renderCachedPlot({
+    dt_hours <- dt_filtered() %>%
+      .[, .(Trips = sum(.N)), by = Formatted.Hour]
+    
+    ggplot(dt_hours, aes(x = Formatted.Hour, y = Trips, fill = Formatted.Hour)) + 
+      geom_bar(show.legend = F, position = "dodge", stat = "identity", ...) +
+      ...
+```
+
+### Tabset layout (from `ui.R`)
+```R
+tabsetPanel(
+        tabPanel("Heat Maps",
+                 fluidRow(
+                   column(width = 6,
+                          plotOutput("monthHourHeat")
+                   ),
+                   column(width = 6,
+                          plotOutput("monthDayHeat"),
+                   ),
+                   column(width = 6,
+                          plotOutput("monthWdayHeat"),
+                   ),
+                   column(width = 6,
+                          plotOutput("baseWdayHeat")
+                   )
+                 )     
+        ),
+        tabPanel("Leaflet",
+                 uiOutput(outputId = "synced_maps")
+        ),
+        tabPanel("Charts",
+                 plotOutput("hourChart"),
+                 plotOutput("monthHourChart")
+        )
+      )
+```
+
+### Input layout (from `ui.R`)
+```R
+      selectInput("base", 
+                  label = "Select base to filter by:", 
+                  choices = c("All"),
+                  selected = "All"
+                  ),
+      selectInput("borough",
+                  label = "Select borough to filter by:", 
+                  choices = c("All"),
+                  selected = "All"
+      ),
+```
+
+### Populate inputs (from `server.R`)
+```R
+updateSelectInput(session, "base",
+                    label = "Select base to filter by:",
+                    choices = c("All", as.character(unique(dt_all[["Base"]]))),
+                    selected = "All"
+  )
+  
+  updateSelectInput(session, "borough",
+                    label = "Select borough to filter by:",
+                    choices = c("All", as.character(unique(dt_all[["Borough"]]))),
+                    selected = "All"
+  )
+```
