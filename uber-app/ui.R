@@ -24,6 +24,8 @@ fluidPage(
                   choices = c("All"),
                   selected = "All"
       ),
+      
+      includeMarkdown("app-data/description.md")
     ),
     mainPanel(
       tabsetPanel(
@@ -33,10 +35,10 @@ fluidPage(
                           plotOutput("monthHourHeat")
                    ),
                    column(width = 6,
-                          plotOutput("monthDayHeat"),
+                          plotOutput("monthDayHeat")
                    ),
                    column(width = 6,
-                          plotOutput("monthWdayHeat"),
+                          plotOutput("monthWdayHeat")
                    ),
                    column(width = 6,
                           plotOutput("baseWdayHeat")
@@ -44,11 +46,21 @@ fluidPage(
                  )     
         ),
         tabPanel("Leaflet",
-                 uiOutput(outputId = "synced_maps")
+                 uiOutput(outputId = "syncedMaps")
         ),
         tabPanel("Charts",
                  plotOutput("hourChart"),
                  plotOutput("monthHourChart")
+        ),
+        tabPanel("Tables",
+                 fluidRow(
+                   column(width = 8,
+                          dataTableOutput("monthTable")
+                          ),
+                   column(width = 4,
+                          dataTableOutput("hourTable")
+                   )
+                 )
         )
       )
     )

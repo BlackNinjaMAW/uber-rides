@@ -25,6 +25,18 @@ day_levels <- c(
   "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 )
 
+tableOptions <- list(
+  searching = FALSE,      
+  lengthChange = FALSE,   
+  info = FALSE,           
+  paging = FALSE,         
+  ordering = FALSE,
+  pageLength = 50,
+  columnDefs = list(
+    list(targets = "_all", className = "dt-center") 
+  )
+)
+
 sky_colors <- c(
   "1 AM"  = "#14192d",
   "2 AM"  = "#15213f",
@@ -80,7 +92,6 @@ new_york_bounds <- list(
 )
 
 
-
 # Define server logic required to draw a histogram
 function(input, output, session) {
   
@@ -103,14 +114,32 @@ function(input, output, session) {
       .[input$base == "All" | input$base == Base] %>%
       .[input$borough == "All" | input$borough == Borough]
   })
+  
+  dt_hours <- reactive({
+    dt_filtered() %>%
+      .[, .(Trips = sum(.N)), keyby = Formatted.Hour]
+  })
+  
+  output$monthTable <- renderDataTable({
+    dt_filtered() %>%
+      .[, .(Trips = sum(.N)), keyby = c("Formatted.Month", "Day")] %>%
+      dcast(Day ~ Formatted.Month, value.var = "Trips") %>%
+      rbind(c(alist(Day = "Total"), .[, colSums(.SD, na.rm = T), .SDcols = 2:ncol(.)]))
+  }, options = tableOptions)
+  
+  output$hourTable <- renderDataTable({
+    dt_hours() %>%
+      .[, .(Hour = Formatted.Hour, Trips)] %>%
+      rbind(list("Total", sum(.[["Trips"]])))
+  }, options = tableOptions)
 
   
-  output$synced_maps <- renderUI({
+  output$syncedMaps <- renderUI({
     dt_data <- dt_filtered()
 
     # Create kernel density output
     kde <- bkde2D(dt_data[, list(Lon, Lat)],
-                  bandwidth=c(.0045, .0068), gridsize = c(1000,1000))
+                  bandwidth=c(.0045, .0068), gridsize = c(300,300))
 
     # Create Raster from Kernel Density output
     KernelDensityRaster <- raster(list(x=kde$x1, y=kde$x2, z = kde$fhat))
@@ -151,12 +180,9 @@ function(input, output, session) {
 
     sync(discreteMap, binnedMap, ncol = 1)
   })
-  
+
   output$hourChart <- renderCachedPlot({
-    dt_hours <- dt_filtered() %>%
-      .[, .(Trips = sum(.N)), by = Formatted.Hour]
-    
-    ggplot(dt_hours, aes(x = Formatted.Hour, y = Trips, fill = Formatted.Hour)) + 
+    ggplot(dt_hours(), aes(x = Formatted.Hour, y = Trips, fill = Formatted.Hour)) +
       geom_bar(show.legend = F, position = "dodge", stat = "identity", color = "grey40", linewidth = 0.05) +
       scale_fill_manual(values = sky_colors) +
       labs(title = "# of Trips by Hour", x = "Hour", fill = "Hour") +
@@ -164,16 +190,16 @@ function(input, output, session) {
       coord_flip() +
       plot_theme
   }, cacheKeyExpr = { list(input$base, input$borough) }, bg="transparent")
-  
+
   output$monthHourChart <- renderCachedPlot({
     dt_month_hours <- dt_filtered() %>%
       .[, .(Trips = sum(.N)), by = c("Formatted.Month", "Formatted.Hour")]
-    
+
     max_bar_april <- dt_month_hours %>%
       .[Formatted.Month == "Apr",] %>%
       .[which.max(Trips[Formatted.Month == "Apr"]),]
-    
-    ggplot(dt_month_hours, aes(x = Formatted.Month, y = Trips, fill = Formatted.Hour)) + 
+
+    ggplot(dt_month_hours, aes(x = Formatted.Month, y = Trips, fill = Formatted.Hour)) +
       geom_bar(show.legend = T, position = "dodge", stat = "identity", color = "grey40", linewidth = 0.05) +
       scale_fill_manual(values = sky_colors) +
       labs(title = "# of Trips by Month and Hour", x = "Month", fill = "Hour") +
@@ -185,7 +211,7 @@ function(input, output, session) {
       guides(fill = guide_legend(nrow = 3, ncol = 8)) +
       plot_theme +
       theme(legend.position = "bottom", legend.key = element_rect(color = "grey40"))
-    
+
   }, cacheKeyExpr = { list(input$base, input$borough) }, bg="transparent")
   
   output$monthHourHeat <- renderCachedPlot({
