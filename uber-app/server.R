@@ -8,6 +8,8 @@ library(ggplot2)
 library(raster)
 library(shiny)
 
+shinyOptions(error = browser)
+
 hour_levels <- c(
   "1 AM",  "2 AM", "3 AM", "4 AM",  
   "5 AM",  "6 AM",  "7 AM", "8 AM",  
@@ -76,8 +78,8 @@ plot_theme <- ggdark::dark_theme_gray(base_size = 14) +
   theme(plot.title = element_text(color = "#F7F7F7"),
         plot.background = element_blank(),
         panel.background = element_blank(),
-        panel.grid.major = element_line(color = "grey40", linewidth = 0.2),
-        panel.grid.minor = element_line(color = "grey40", linewidth = 0.2),
+        panel.grid.major = element_line(color = "grey40", size = 0.2),
+        panel.grid.minor = element_line(color = "grey40", size = 0.2),
         legend.background = element_blank(),
         axis.ticks = element_blank(),
         legend.key = element_blank(),
@@ -91,6 +93,7 @@ new_york_bounds <- list(
   NE = c(40.915256, -73.700272) 
 )
 
+caption_char_limit <- 70
 
 # Define server logic required to draw a histogram
 function(input, output, session) {
@@ -108,6 +111,7 @@ function(input, output, session) {
   )
   
   dt_filtered <- reactive({
+    # Only change when inputs change
     req(input$base, input$borough)
     
     dt_all %>% 
@@ -182,7 +186,11 @@ function(input, output, session) {
   })
 
   output$hourChart <- renderCachedPlot({
-    ggplot(dt_hours(), aes(x = Formatted.Hour, y = Trips, fill = Formatted.Hour)) +
+    dt_hours <- dt_hours()
+    
+    dt_hours$Formatted.Hour <- factor(dt_hours$Formatted.Hour, levels = rev(levels(dt_hours$Formatted.Hour)))
+    
+    ggplot(dt_hours, aes(x = Formatted.Hour, y = Trips, fill = Formatted.Hour)) +
       geom_bar(show.legend = F, position = "dodge", stat = "identity", color = "grey40", linewidth = 0.05) +
       scale_fill_manual(values = sky_colors) +
       labs(title = "# of Trips by Hour", x = "Hour", fill = "Hour") +
@@ -218,12 +226,13 @@ function(input, output, session) {
     dt_month_hours <- dt_filtered() %>%
       .[, .(Trips = sum(.N)), by = c("Formatted.Month", "Formatted.Hour")]
 
+    caption_text <-  paste(collapse = "\n", strwrap(width = caption_char_limit, "Each tile represents an hour of a given month, with the fill indicating the\n number of trips scheduled at that hour across all days of the month."))
+    
     ggplot(dt_month_hours, aes(x = Formatted.Month, y = Formatted.Hour, fill = Trips)) +
       geom_tile(color = "black") +
       scale_fill_distiller(palette = "Spectral") +
       labs(title = "Heat Map of Uber Rides", subtitle = "Plotted by Hour and Month",
-           x = "Month", y = "Hour of the Day", fill = "# of Trips",
-           caption = "Each tile represents an hour of a given month, with the fill indicating the\n number of trips scheduled at that hour across all days of the month.") +
+           x = "Month", y = "Hour of the Day", fill = "# of Trips", caption = caption_text) +
       plot_theme +
       theme(legend.position = "right")
   }, cacheKeyExpr = { list(input$base, input$borough) }, bg="transparent")
@@ -231,13 +240,14 @@ function(input, output, session) {
   output$monthDayHeat <- renderCachedPlot({
     dt_month_days <- dt_filtered() %>%
       .[, .(Trips = sum(.N)), by = c("Formatted.Month", "Day")]
+    
+    caption_text <-  paste(collapse = "\n", strwrap(width = caption_char_limit, "Each tile represents a single day of a given month, with the fill indicating the\n number of trips scheduled that day."))
 
     ggplot(dt_month_days, aes(x = Formatted.Month, y = Day, fill = Trips)) +
       geom_tile(color = "black") +
       scale_fill_distiller(palette = "Spectral") +
       labs(title = "Heat Map of Uber Rides", subtitle = "Plotted by Month and Day",
-           x = "Month", y = "Day of the Month", fill = "# of Trips",
-           caption = "Each tile represents a single day of a given month, with the fill indicating the\n number of trips scheduled that day.") +
+           x = "Month", y = "Day of the Month", fill = "# of Trips", caption = caption_text) +
       plot_theme +
       theme(legend.position = "right")
   }, cacheKeyExpr = { list(input$base, input$borough) }, bg="transparent")
@@ -245,13 +255,14 @@ function(input, output, session) {
   output$monthWdayHeat <- renderCachedPlot({
     dt_month_wdays <- dt_filtered() %>%
       .[, .(Trips = sum(.N)), by = c("Formatted.Month", "Formatted.Day")]
+    
+    caption_text <-  paste(collapse = "\n", strwrap(width = caption_char_limit, "Each tile represents a week day of a given month, with the fill indicating the\n number of trips scheduled that day of the week across all weeks of the month."))
 
     ggplot(dt_month_wdays, aes(x = Formatted.Month, y = Formatted.Day, fill = Trips)) +
       geom_tile(color = "black") +
       scale_fill_distiller(palette = "Spectral") +
       labs(title = "Heat Map of Uber Rides", subtitle = "Plotted by Month and Day of Week",
-           x = "Month", y = "Day of the Week", fill = "# of Trips",
-           caption = "Each tile represents a week day of a given month, with the fill indicating the\n number of trips scheduled that day of the week across all weeks of the month.") +
+           x = "Month", y = "Day of the Week", fill = "# of Trips", caption = caption_text) +
       plot_theme +
       theme(legend.position = "right")
   }, cacheKeyExpr = { list(input$base, input$borough) }, bg="transparent")
@@ -260,62 +271,14 @@ function(input, output, session) {
     dt_base_wdays <- dt_filtered() %>%
       .[, .(Trips = sum(.N)), by = c("Base", "Formatted.Day")]
 
+    caption_text <-  paste(collapse = "\n", strwrap(width = caption_char_limit, "Each tile represents a week day of service for a given base, with the fill indicating the\n number of trips scheduled that day of the week across all trips for that base."))
+    
     ggplot(dt_base_wdays, aes(x = Base, y = Formatted.Day, fill = Trips)) +
       geom_tile(color = "black") +
       scale_fill_distiller(palette = "Spectral") +
       labs(title = "Heat Map of Uber Rides", subtitle = "Plotted by Base and Day of Week",
-           x = "Month", y = "Day of the Week", fill = "# of Trips",
-           caption = "Each tile represents a week day of service for a given base, with the fill indicating the\n number of trips scheduled that day of the week across all trips for that base.") +
+           x = "Month", y = "Day of the Week", fill = "# of Trips", caption = caption_text) +
       plot_theme +
       theme(legend.position = "right")
   }, cacheKeyExpr = { list(input$base, input$borough) }, bg="transparent")
 }
-
-# Assignment details #
-# 
-# Using the data attached you are going to perform the following analysis and have it be displayed as a shiny application.
-# 
-#   20% of the grade is graded on the shiny application, form, function 
-#   and displaying all of the following information with explanation of each chart. 
-# 
-#   40% of the grade is completing all of the following charts, and displaying 
-#   the legends and colors in detail with good aesthetics and labeling.
-# 
-#   20% of the grade is the Geo Spatial leaflet application  application 
-#   that you will build within the shiny application
-# 
-#   10% Building a prediction ride model
-# 
-#   10% Code documentation within GitHub readme. Requirements have changed. 
-#   I only want to see code snippets within the readme. 
-#   All bar charts and graphs should be in your ShinyApplication. Make sure 
-#   your file structure is completed accurately and you have your 
-#   shiny URL available for me to click and review your website.
-# 
-# Pivot table to display trips by the hour.  
-# 
-# Chart that shows Trips by Hour and Month
-# 
-# Chart that displays Trips Every Hour.
-# 
-# Plot data by trips taken during every day of the month.
-# 
-# I should see a table that shows Trips Every Day (Max 31 days in a month 
-# so I should see total trips taken each day). 
-# 
-# Chart by Trips by Day and Month (bar chart with each day of the week, 
-# x axis as the month). I need a chart that shows number of trips by month
-# 
-# Chart Trips by Bases and Month (Base is the X axis and Month is your label)
-# 
-# Heat Maps
-# 
-# Heat map that displays by hour and day
-# 
-# Heat map by month and day
-# 
-# Heat map by month and week
-# 
-# Heat map Bases and Day of Week
-# 
-# Leaflet Shiny Geospatial Map this portion is subject to change. 

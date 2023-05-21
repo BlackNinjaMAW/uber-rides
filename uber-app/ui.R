@@ -8,7 +8,7 @@ fluidPage(
     
   tags$head(
     # Dark Mode!
-    tags$link(rel = "stylesheet", type = "text/css", href = "darkly.min.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = "darkly.min.css"),
   ),
   
   sidebarLayout(
@@ -24,9 +24,9 @@ fluidPage(
                   choices = c("All"),
                   selected = "All"
       ),
-      
+
       includeMarkdown("app-data/description.md")
-    ),
+    , width = 3),
     mainPanel(
       tabsetPanel(
         tabPanel("Heat Maps",
@@ -63,6 +63,6 @@ fluidPage(
                  )
         )
       )
-    )
+      , width = 9)
   )
 )
