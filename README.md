@@ -5,7 +5,7 @@ This repository contains scripts and data for a light analysis of a dataset prov
 Data
 -
 
-The data used in this analysis consists of Uber rides data from April to September 2014. The raw data files are located in the `scripts/data/raw-data/` directory. The processed data used in the Shiny app is saved as an RDS file in the `uber-app/app-data/` directory. Additionally, a GeoJSON file containing the boundaries of New York City boroughs is located in the `scripts/data/geospatial-data/` directory.
+The data used in this analysis consists of Uber rides data from April to September 2014. The raw data files are located in the `scripts/data/raw-data/` directory. The processed data used in the Shiny app is saved as an RDS file in the `uber-app/app-data/` directory. Additionally, a GeoJSON file containing the boundaries of the New York City boroughs is located in the `scripts/data/geospatial-data/` directory.
 
 Scripts
 -
